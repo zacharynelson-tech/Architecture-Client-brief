@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cabin Design Brief Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #eef1f3; --sheet: #fbfcfc; --ink: #17262f; --ink-soft: #4b5d68;
+    --line: #c9d3d9; --grid: #dde4e8; --blue: #1f4fb8; --blue-wash: #e3ebfa; --red: #d2392b; --ok: #2b7a4b;
+    --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body {
+    margin: 0; font-family: var(--font-body); font-size: 18px; line-height: 1.5; color: var(--ink);
+    background-color: var(--paper);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px; min-height: 100vh;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 28px 20px 64px; }
+  header.top { margin-bottom: 20px; }
+  header.top h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.4rem, 7vw, 3.8rem); line-height: 0.98; letter-spacing: 0.01em; margin: 0 0 8px; }
+  header.top p { margin: 0; color: var(--ink-soft); max-width: 56ch; }
+  .sheet { background: var(--sheet); border: 2px solid var(--ink); padding: clamp(18px, 4vw, 36px); position: relative; }
+
+  .dim { display: flex; align-items: center; margin-bottom: 8px; }
+  .dim .tick { width: 2px; height: 16px; background: var(--ink); flex: none; }
+  .dim .seg { flex: 1; height: 2px; background: var(--line); }
+  .dim .seg.done { background: var(--blue); }
+  .dim-label { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; color: var(--ink-soft); margin: 0 0 18px; }
+
+  h2.q { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.9rem, 5vw, 2.7rem); line-height: 1.05; margin: 0 0 6px; }
+  .hint { color: var(--ink-soft); margin: 0 0 22px; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 0; padding: 0; border: 0; }
+  .opt { position: relative; }
+  .opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; margin: 0; }
+  .opt label { display: block; padding: 14px 16px; border: 2px solid var(--line); background: #fff; font-weight: 500; cursor: pointer; min-height: 56px; }
+  .opt label small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.86rem; line-height: 1.3; margin-top: 2px; }
+  .opt input:hover + label { border-color: var(--ink-soft); }
+  .opt input:checked + label { border-color: var(--blue); background: var(--blue-wash); box-shadow: inset 4px 0 0 var(--blue); }
+  .opt input:focus-visible + label { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .opt.decide label { border-style: dashed; color: var(--ink-soft); }
+  .other-box { margin-top: 12px; }
+  input[type="text"], textarea, select {
+    width: 100%; font: inherit; color: var(--ink); background: #fff; border: 2px solid var(--line); padding: 12px 14px;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus { outline: 3px solid var(--blue); outline-offset: 1px; border-color: var(--blue); }
+  textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+  .field-label { display: block; font-weight: 600; margin: 0 0 6px; }
+
+  .nav { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; align-items: center; }
+  button.btn { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; letter-spacing: 0.02em; padding: 10px 22px; border: 2px solid var(--ink); background: var(--ink); color: #fff; cursor: pointer; }
+  button.btn:hover { background: #0c171d; }
+  button.btn:focus-visible, button.mini:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  button.btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+  button.btn.ghost { background: transparent; color: var(--ink); }
+  button.btn.ghost:hover { background: var(--blue-wash); }
+  .toast { color: var(--blue); font-weight: 600; min-height: 1.5em; }
+
+  .start p { max-width: 58ch; }
+  .start .how { margin: 18px 0 24px; padding-left: 20px; }
+  .start .how li { margin-bottom: 4px; }
+
+  /* results */
+  .drawing-title { font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 6vw, 3rem); line-height: 1; margin: 0 0 4px; }
+  .sub { color: var(--ink-soft); margin: 0 0 22px; max-width: 62ch; }
+  h3.sec { font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; margin: 34px 0 8px; padding-top: 18px; border-top: 2px solid var(--ink); }
+  h4.room { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; margin: 18px 0 2px; color: var(--blue); }
+
+  .pick { border: 2px solid var(--blue); background: var(--blue-wash); padding: 16px 18px 18px; }
+  .pick h3 { font-family: var(--font-display); font-size: 1.9rem; margin: 0; line-height: 1.05; }
+  .pick .tagline { margin: 2px 0 10px; color: var(--ink-soft); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip { background: #fff; border: 1px solid var(--blue); padding: 2px 10px; font-size: 0.9rem; font-weight: 500; }
+  .why-list { margin: 8px 0 0; padding-left: 20px; }
+  .why-list li { margin-bottom: 4px; }
+  .render { width: 100%; height: auto; display: block; margin: 12px 0 0; border: 1px solid var(--line); background: #fff; aspect-ratio: 4 / 3; object-fit: cover; }
+  .caption { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.85rem; }
+  .thumb { width: 100%; height: 90px; object-fit: cover; display: block; margin-bottom: 8px; border: 1px solid var(--line); }
+  .planimg { width: 100%; height: auto; display: block; border: 1px solid var(--line); background: #fff; margin-top: 12px; }
+  .linkrow { margin-top: 8px; font-size: 0.95rem; }
+  .linkrow a { color: var(--blue); font-weight: 600; }
+
+  .compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+  .cmp { border: 2px solid var(--line); background: #fff; padding: 12px 14px; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+  .cmp:hover { border-color: var(--ink-soft); }
+  .cmp:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .cmp[aria-pressed="true"] { border-color: var(--blue); box-shadow: inset 4px 0 0 var(--blue); background: var(--blue-wash); }
+  .cmp strong { font-family: var(--font-display); font-size: 1.3rem; display: block; line-height: 1.1; }
+  .cmp span.pct { font-size: 0.9rem; color: var(--ink-soft); }
+  .bar { height: 8px; background: var(--line); margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: var(--blue); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  .brief-box { border: 2px solid var(--blue); background: var(--blue-wash); padding: 16px 18px 18px; }
+  .brief-box textarea { background: #fff; font-size: 1.15rem; }
+
+  ul.items { list-style: none; padding: 0; margin: 0; }
+  ul.items li { display: grid; grid-template-columns: 26px 1fr auto; gap: 4px 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  ul.items input[type="checkbox"] { width: 22px; height: 22px; margin-top: 3px; accent-color: var(--blue); }
+  ul.items label { cursor: pointer; font-weight: 600; }
+  ul.items li.done label { color: var(--ink-soft); text-decoration: line-through; }
+  .dims { color: var(--ink-soft); font-weight: 400; font-size: 0.92rem; }
+  .why { grid-column: 2; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.35; }
+  .qty { display: flex; align-items: center; gap: 6px; }
+  .qty b { min-width: 1.4em; text-align: center; font-family: var(--font-display); font-size: 1.2rem; }
+  button.mini { width: 32px; height: 32px; border: 2px solid var(--ink); background: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; font-weight: 600; }
+  button.mini:hover { background: var(--blue-wash); }
+  .addrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 16px; }
+  .addrow button { padding: 8px 18px; font-size: 1.1rem; }
+
+  .meter { margin: 6px 0 4px; border: 2px solid var(--ink); height: 22px; background: #fff; position: relative; }
+  .meter i { display: block; height: 100%; background: var(--ok); }
+  .meter.mid i { background: #c78a00; }
+  .meter.high i { background: var(--red); }
+  .meter-note { margin: 6px 0 0; font-size: 0.95rem; }
+  .fine { color: var(--ink-soft); font-size: 0.88rem; }
+
+  ul.check { list-style: none; padding: 0; margin: 0; }
+  ul.check li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.check input { width: 22px; height: 22px; margin-top: 3px; flex: none; accent-color: var(--blue); }
+  ul.check label { cursor: pointer; }
+  ul.check li.done label { color: var(--ink-soft); text-decoration: line-through; }
+
+  details.tpl { margin-top: 14px; }
+  details.tpl summary { cursor: pointer; font-weight: 600; }
+
+  .titleblock { margin-top: 30px; margin-left: auto; width: min(100%, 460px); border: 2px solid var(--ink); display: grid; grid-template-columns: 1fr 1fr; font-size: 0.95rem; }
+  .titleblock div { padding: 8px 10px; border-bottom: 1px solid var(--ink); }
+  .titleblock div:nth-child(odd) { border-right: 1px solid var(--ink); }
+  .titleblock div:nth-last-child(-n+2) { border-bottom: 0; }
+  .titleblock small { display: block; color: var(--ink-soft); font-size: 0.78rem; }
+  .titleblock strong { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; word-break: break-word; }
+  footer.note { margin-top: 18px; color: var(--ink-soft); font-size: 0.9rem; }
+
+  @media print {
+    body { background: #fff; font-size: 14px; }
+    .nav, .no-print, footer.note, .addrow, .qty button, .compare, details.tpl { display: none !important; }
+    .sheet { border-width: 2px; padding: 12px; }
+    textarea { border: 0; padding: 0; resize: none; }
+    .brief-box, .pick { background: #fff; }
+    h3.sec { break-after: avoid; }
+    ul.items li { break-inside: avoid; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .opt label { transition: border-color 0.12s, background-color 0.12s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Cabin Design Brief Builder</h1>
+    <p>Answer a few questions about how you live. We'll match you to one of three cabins, write your design brief, and build a list of the furniture, appliances, and fixtures your cabin needs.</p>
+  </header>
+  <main class="sheet" id="app"></main>
+  <footer class="note no-print">Your answers stay in this browser tab. Nothing is saved or sent anywhere.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- CATALOG (sizes in feet, measured from the furniture sheet, so they are approximate) ---------- */
+  var ROOMS = ["Bedroom", "Bath", "Kitchen", "Living", "Work"];
+  var CATALOG = {
+    bed_twin:      { n: "Twin bed",                  w: 3.5, d: 6.5, room: "Bedroom" },
+    bed_full:      { n: "Full bed",                  w: 4.5, d: 6.5, room: "Bedroom" },
+    bed_queen:     { n: "Queen bed",                 w: 5,   d: 6.5, room: "Bedroom" },
+    bed_king:      { n: "King bed",                  w: 6,   d: 6.5, room: "Bedroom" },
+    dresser:       { n: "Dresser",                   w: 5,   d: 2.5, room: "Bedroom" },
+    nightstand:    { n: "Nightstand (end table)",    w: 1.5, d: 1.5, room: "Bedroom" },
+    toilet:        { n: "Toilet",                    w: 1.75, d: 2.5, room: "Bath", extra: "needs clear space in front" },
+    vanity_narrow: { n: "Vanity with sink, narrow",  w: 1.75, d: 2.5, room: "Bath" },
+    vanity_wide:   { n: "Vanity with sink, wide",    w: 1.75, d: 3,   room: "Bath" },
+    shower_sq:     { n: "Shower, square",            w: 3,   d: 3,   room: "Bath" },
+    shower_rect:   { n: "Shower, rectangle",         w: 3,   d: 5,   room: "Bath" },
+    tub:           { n: "Bathtub",                   w: 2.5, d: 5,   room: "Bath" },
+    cabinet:       { n: "Cabinet / counter module",  w: 2,   d: 2,   room: "Kitchen" },
+    sink_single:   { n: "Kitchen sink, single",      w: 2,   d: 2.5, room: "Kitchen" },
+    sink_double:   { n: "Kitchen sink, double",      w: 2,   d: 2.5, room: "Kitchen" },
+    cooktop:       { n: "Stove / cooktop",           w: 2,   d: 2.5, room: "Kitchen" },
+    fridge:        { n: "Refrigerator",              w: 2,   d: 2.5, room: "Kitchen" },
+    dine_round:    { n: "Round dining table, 4 chairs", w: 6, d: 6,  room: "Kitchen", extra: "footprint includes chairs" },
+    dine_rect:     { n: "Dining table, 6 chairs",    w: 5,   d: 7,   room: "Kitchen", extra: "footprint includes chairs" },
+    couch_lg:      { n: "Couch, large",              w: 7,   d: 2.5, room: "Living" },
+    couch_sm:      { n: "Couch, small",              w: 5,   d: 2.5, room: "Living" },
+    chair:         { n: "Chair",                     w: 2.5, d: 2.5, room: "Living" },
+    end_table:     { n: "End table",                 w: 1.5, d: 1.5, room: "Living" },
+    coffee_rect:   { n: "Coffee table, rectangle",   w: 3,   d: 1.5, room: "Living" },
+    coffee_sq:     { n: "Coffee table, square",      w: 3,   d: 3,   room: "Living" },
+    pool:          { n: "Pool table",                w: 10,  d: 5,   room: "Living", extra: "needs about 4' of clearance on every side" },
+    desk:          { n: "Desk with chair",           w: 5,   d: 2.5, room: "Work" },
+    console:       { n: "Console table",             w: 5,   d: 1.5, room: "Work", extra: "good for shelves, speakers, a printer" }
+  };
+  function fmt(n) { return (Math.round(n * 4) / 4).toString().replace(".25", "¼").replace(".5", "½").replace(".75", "¾"); }
+  function dimText(c) { return fmt(c.w) + "' × " + fmt(c.d) + "'"; }
+
+  /* ---------- CABINS (from the uploaded plans; sizes are approximate) ---------- */
+  var ATTRS = ["mainRoom", "loft", "enclosed", "deck", "open", "cozy"];
+  var CABINS = {
+    "a": {
+      id: "a", name: "Cabin A", nick: "The Loft Cabin",
+      tagline: "A balanced main room with the biggest loft of the three.",
+      attr: { mainRoom: 2, loft: 3, enclosed: 1, deck: 2, open: 1, cozy: 2 },
+      chips: ["Main room about 17' × 13'", "Loft about 12' × 19'", "1 enclosed room", "Side deck + front porch"],
+      usable: 480,
+      why: {
+        loft: "Its loft is the biggest of the three, about 12' × 19'.",
+        mainRoom: "A solid main room, about 17' × 13', plus a big loft above.",
+        enclosed: "One enclosed room, about 11' × 5', works well as the bathroom.",
+        deck: "A long side deck (about 8' × 17') plus a small front porch.",
+        open: "The loft overlooks the main room, so the cabin feels connected.",
+        balanced: "Your answers point to a balanced cabin: a good-sized main room, the biggest loft, and a side deck.",
+        cozy: "Compact enough to feel snug, especially up in the loft."
+      },
+      tips: [
+        "The stairs run along the top-left corner of the first floor. Keep that edge clear.",
+        "The small enclosed room on the first floor (about 11' × 5') is the natural spot for the bathroom.",
+        "Sliding glass doors open to the side deck. Leave a path to them.",
+        "The loft is open to the room below on one side, so keep beds and furniture back from that edge."
+      ]
+    },
+    "b": {
+      id: "b", name: "Cabin B", nick: "The Deck Cabin",
+      tagline: "The coziest and most compact cabin, with the biggest deck.",
+      attr: { mainRoom: 1, loft: 2, enclosed: 1, deck: 3, open: 2, cozy: 3 },
+      chips: ["Main room about 13' × 13'", "Loft about 14' × 11'", "1 enclosed room", "Large deck about 10' × 17'"],
+      usable: 430,
+      why: {
+        deck: "It has the biggest deck, about 10' × 17', right off the main room.",
+        cozy: "It's the most compact and tucked-in of the three.",
+        open: "Windows on two sides and a loft that overlooks the room below.",
+        loft: "A loft of about 14' × 11' above the main room.",
+        mainRoom: "A smaller main room, about 13' × 13', which keeps things cozy.",
+        balanced: "Your answers point to a small, cozy cabin with a big deck to spread out on.",
+        enclosed: "One enclosed room, about 10' × 5', works well as the bathroom."
+      },
+      tips: [
+        "The enclosed room on the first floor (about 10' × 5') is the natural spot for the bathroom.",
+        "The stairs sit in the lower-right corner and cut into the floor. Keep a clear landing.",
+        "Sliding glass doors open onto the large deck. Leave a path to them.",
+        "Part of the second floor is open air above the deck. Only the left side is loft floor."
+      ]
+    },
+    "c": {
+      id: "c", name: "Cabin C", nick: "The Open-Hall Cabin",
+      tagline: "The biggest main room, two enclosed rooms, and a wide front porch.",
+      attr: { mainRoom: 3, loft: 2, enclosed: 3, deck: 2, open: 3, cozy: 0 },
+      chips: ["Main room about 16' × 15'", "Loft about 13' × 12'", "2 enclosed rooms", "Wide porch about 8' × 24'"],
+      usable: 480,
+      why: {
+        mainRoom: "It has the biggest main room, about 16' × 15'.",
+        enclosed: "Two enclosed rooms on the first floor, about 6' × 8' and 6' × 6'.",
+        open: "A wall of windows on one side and a loft that overlooks the room.",
+        deck: "A wide front porch, about 8' deep, runs the full width of the cabin.",
+        loft: "A loft of about 13' × 12' for sleeping.",
+        cozy: "",
+        balanced: "Your answers point to a roomy, open cabin with space for everything."
+      },
+      tips: [
+        "Two small rooms sit on the right side of the first floor. Use one for the bathroom and decide what the other one is for.",
+        "The stairs run along the top wall of the first floor. Keep that edge clear.",
+        "The left wall is mostly windows. Furniture there will block the view.",
+        "Sliding glass doors open to the wide front porch. Leave a path to them."
+      ]
+    }
+  };
+  var ATTR_ORDER = ["a", "b", "c"];
+
+  /* ---------- QUESTIONS ---------- */
+  var QUESTIONS = [
+    { id: "fun", title: "What do you do for fun?", hint: "Pick the one you'd choose on a free Saturday.", other: true, opts: [
+      { key: "gaming", label: "Gaming", phrase: "gaming", w: { mainRoom: 1, cozy: 1 }, note: "Give the gaming setup its own spot with a desk, outlets, and a wall for screens." },
+      { key: "sports", label: "Sports", phrase: "sports", w: { enclosed: 1, deck: 1 }, note: "Add storage for gear near the front door." },
+      { key: "cooking", label: "Cooking", phrase: "cooking", w: { mainRoom: 2 }, note: "Leave counter space for two people to cook at the same time." },
+      { key: "music", label: "Music", phrase: "music", w: { mainRoom: 1, enclosed: 1 }, note: "Pick a spot for instruments or speakers away from the sleeping area." },
+      { key: "art", label: "Art and making things", phrase: "making things", w: { mainRoom: 2, open: 1 }, note: "Set aside a table with good light and storage for supplies." },
+      { key: "outdoors", label: "Being outdoors", phrase: "being outdoors", w: { deck: 3 }, note: "Connect the main room to the deck with a door, and leave a clear path to it." },
+      { key: "friends", label: "Having friends over", phrase: "having friends over", w: { mainRoom: 2, deck: 1 }, note: "Make sure there are enough seats for a few guests." },
+      { key: "reading", label: "Reading and watching shows", phrase: "reading and watching shows", w: { cozy: 2, loft: 1 }, note: "Create a comfy seating zone facing a window or wall." }
+    ]},
+    { id: "loc", title: "Where would you most want to escape to?", hint: "This is where your cabin is built.", other: true, opts: [
+      { key: "lake", label: "A lake", phrase: "lakeside", w: { deck: 1, open: 1 }, note: "Aim the biggest windows and the deck toward the water." },
+      { key: "mountains", label: "The mountains", phrase: "mountain", w: { open: 1, deck: 1 }, note: "Aim the main view toward the peaks and plan a spot for boots and coats." },
+      { key: "beach", label: "A beach", phrase: "beachside", w: { deck: 1, open: 1 }, note: "Add a place to rinse off and store towels and sandy gear." },
+      { key: "forest", label: "A forest", phrase: "forest", w: { cozy: 1 }, note: "Use windows to bring the trees into the main room." },
+      { key: "desert", label: "The desert", phrase: "desert", w: { deck: 1 }, note: "Think about shade, and keep direct sun out of the main room." },
+      { key: "snow", label: "A snowy town", phrase: "snowy-town", w: { cozy: 2 }, note: "Plan a spot for wet boots and coats, plus a warm place to gather." }
+    ]},
+    { id: "who", title: "Who is staying in the cabin?", hint: "The cabin is small, so it's for one or two people.", opts: [
+      { key: "one", label: "Just me", phrase: "one person", w: { cozy: 1 } },
+      { key: "two", label: "Me and one other person", sub: "A partner, a friend, or family.", phrase: "two people", w: { mainRoom: 1, enclosed: 1 } }
+    ]},
+    { id: "stay", title: "How long do you stay at a time?", hint: "This decides how much stuff you bring.", opts: [
+      { key: "weekend", label: "Weekend getaways", sub: "A bag and a few hooks are enough.", phrase: "weekend getaways", w: { cozy: 1 } },
+      { key: "seasons", label: "A few weeks each season", sub: "You unpack, but not everything.", phrase: "a few weeks each season", w: {} },
+      { key: "year", label: "I live there year-round", sub: "It's home. You need real storage.", phrase: "year-round living", w: { enclosed: 2, mainRoom: 1 } }
+    ]},
+    { id: "cook", title: "How do you eat?", hint: "This sets the size of your kitchen.", opts: [
+      { key: "barely", label: "I barely cook", sub: "Snacks, sandwiches, microwave meals.", w: {}, note: "A small kitchen is plenty. Spend your space somewhere else." },
+      { key: "simple", label: "Simple meals", sub: "Breakfast, pasta, grilled cheese.", w: { mainRoom: 1 } },
+      { key: "love", label: "I love cooking", sub: "Real counter space and a real stove.", w: { mainRoom: 2 }, note: "Put the kitchen in the best-lit spot, with room to move around it." },
+      { key: "host", label: "I cook and host dinners", sub: "Guests come over and sit down to eat.", w: { mainRoom: 2, open: 1 }, note: "Make sure the dining table has room for people to pull out chairs." }
+    ]},
+    { id: "sleep", title: "Where do you want to sleep?", hint: "Every cabin has a loft and a main floor.", opts: [
+      { key: "loft", label: "Up in the loft", sub: "High up, tucked away.", phrase: "a sleeping loft", w: { loft: 3 }, note: "Keep the bed back from the loft edge, and plan how you get a dresser up there." },
+      { key: "main", label: "On the main floor", sub: "No stairs at night.", phrase: "a main-floor bedroom", w: { mainRoom: 1 }, note: "Think about how to give a main-floor bed some privacy." },
+      { key: "either", label: "Doesn't matter to me", w: {} }
+    ]},
+    { id: "bed", title: "How do you sleep?", hint: "This picks your bed.", opts: [
+      { key: "twin", label: "Compact is fine", sub: "A twin bed.", w: {} },
+      { key: "full", label: "A regular bed", sub: "A full bed.", w: {} },
+      { key: "queen", label: "I like room to stretch", sub: "A queen bed.", w: { loft: 1, mainRoom: 1 } },
+      { key: "king", label: "I sprawl out", sub: "A king bed. It takes a lot of floor.", w: { loft: 2, mainRoom: 1 }, note: "A king bed is about 6' × 6½'. Check that there is room to walk around it." }
+    ]},
+    { id: "bath", title: "What's your bathroom habit?", hint: "This picks your bath fixtures.", opts: [
+      { key: "shower", label: "Quick shower", w: {} },
+      { key: "tub", label: "Long soak in a tub", w: { enclosed: 1 } },
+      { key: "both", label: "Both a tub and a shower", sub: "They take a lot of space.", w: { enclosed: 2 }, note: "A tub and a shower together need a roomy bathroom. Check that they fit." }
+    ]},
+    { id: "work", title: "Do you need a place to work or make things?", hint: "Homework, a laptop, a project, a hobby.", opts: [
+      { key: "none", label: "No, this is a break from that", w: {} },
+      { key: "desk", label: "A small desk is enough", w: {} },
+      { key: "station", label: "A real workstation", sub: "A desk plus shelves or a printer.", w: { enclosed: 1, mainRoom: 1 } },
+      { key: "studio", label: "A studio or workshop corner", sub: "Space to spread out and store supplies.", w: { mainRoom: 2, open: 1 } }
+    ]},
+    { id: "lounge", title: "How do you relax?", hint: "This picks your living-area furniture.", opts: [
+      { key: "shows", label: "Couch and a show", w: { mainRoom: 1, cozy: 1 } },
+      { key: "reading", label: "A reading chair in a corner", w: { cozy: 2 } },
+      { key: "games", label: "Games and hanging out", sub: "Cards, board games, a game table.", w: { mainRoom: 2, open: 1 }, note: "Your furniture sheet has a pool table. It's about 10' × 5' and needs lots of clear floor around it, so test it before you commit." },
+      { key: "deck", label: "Outside, on the deck", w: { deck: 3 } }
+    ]},
+    { id: "feel", title: "How should the cabin feel?", hint: "Think about the first minute inside.", opts: [
+      { key: "open", label: "Open and airy", phrase: "open and airy", w: { open: 3 } },
+      { key: "cozy", label: "Cozy and tucked in", phrase: "cozy and tucked in", w: { cozy: 3 } },
+      { key: "both", label: "A bit of both", phrase: "both open and cozy", w: { open: 1, cozy: 1 } }
+    ]},
+    { id: "peeve", title: "What would drive you crazy in a small space?", hint: "This is what your design has to avoid.", other: true, opts: [
+      { key: "privacy", label: "No privacy", phrase: "a lack of privacy", w: { enclosed: 2, loft: 1 }, note: "Keep the bed and the bathroom away from the main gathering space." },
+      { key: "storage", label: "No storage", phrase: "a lack of storage", w: { enclosed: 2 }, note: "Add closets or built-in cabinets. Count how many you have." },
+      { key: "light", label: "No natural light", phrase: "dark rooms", w: { open: 2 }, note: "Give every room at least one window." },
+      { key: "clutter", label: "Clutter", phrase: "clutter", w: { enclosed: 1, mainRoom: 1 }, note: "Plan a home for every kind of stuff: shoes, coats, gear, dishes." },
+      { key: "host", label: "No room for guests", phrase: "a cramped main room", w: { mainRoom: 2 }, note: "Keep the main room open enough for a few guests." }
+    ]},
+    { id: "notice", type: "text", title: "Bonus: what should a visitor notice first when they walk in?", hint: "Optional. Skip it if you're not sure.", placeholder: "Example: a huge stone fireplace" }
+  ];
+
+  var BASE_CHECKS = [
+    "Every room has a door, and every door can swing open without hitting furniture.",
+    "There is a sleeping area, a kitchen, and a bathroom.",
+    "You can walk between rooms without crossing furniture.",
+    "Everything fits inside the cabin, and the stairs are clear.",
+    "Every item on your list is drawn on your 1/4\" plan."
+  ];
+
+  var state = fresh();
+  function fresh() { return { step: -1, name: "", answers: {}, client: "", brief: "", chosen: "", list: [], placed: {}, checks: {} }; }
+  var app = document.getElementById("app");
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function lc(s) { return String(s).trim().toLowerCase(); }
+  function qById(id) { return QUESTIONS.filter(function (q) { return q.id === id; })[0]; }
+  function opt(id) {
+    var q = qById(id), a = state.answers[id];
+    if (!a) return null;
+    if (a.index === "other") return { key: "other", label: a.text, phrase: lc(a.text), w: {}, note: "Make sure your plan clearly shows: " + lc(a.text) + "." };
+    return q.opts[a.index];
+  }
+  function key(id) { var o = opt(id); return o ? o.key : ""; }
+
+  /* ---------- SCORING ---------- */
+  // Closest-fit model: your answers add up to a "target" level (0 to 3) for each cabin quality,
+  // and the cabin whose qualities are closest to your targets wins.
+  var EXPECT = (function () {
+    var E = {};
+    ATTRS.forEach(function (k) { E[k] = 0; });
+    QUESTIONS.forEach(function (q) {
+      if (q.type) return;
+      q.opts.forEach(function (o) { for (var k in o.w) E[k] += o.w[k] / q.opts.length; });
+    });
+    return E;
+  })();
+  function desire() {
+    var D = {};
+    ATTRS.forEach(function (k) { D[k] = 0; });
+    QUESTIONS.forEach(function (q) {
+      var o = q.type ? null : opt(q.id);
+      if (o && o.w) for (var k in o.w) D[k] += o.w[k];
+    });
+    return D;
+  }
+  function targets() {
+    var D = desire(), T = {};
+    ATTRS.forEach(function (k) { T[k] = Math.min(3, EXPECT[k] ? 3 * D[k] / EXPECT[k] : 0); });
+    return T;
+  }
+  function rank() {
+    var T = targets();
+    var out = ATTR_ORDER.map(function (id) {
+      var c = CABINS[id], d = 0;
+      ATTRS.forEach(function (k) { d += Math.pow(T[k] - c.attr[k], 2); });
+      return { id: id, dist: d, pct: Math.max(0, Math.min(99, Math.round(100 * (1 - d / (ATTRS.length * 6))))) };
+    });
+    out.sort(function (a, b) { return a.dist - b.dist; });
+    return out;
+  }
+  function reasons(winId) {
+    var win = CABINS[winId], avg = {};
+    ATTRS.forEach(function (k) {
+      var t = 0; ATTR_ORDER.forEach(function (id) { t += CABINS[id].attr[k]; });
+      avg[k] = t / ATTR_ORDER.length;
+    });
+    var groups = {}, order = [];
+    QUESTIONS.forEach(function (q) {
+      var o = q.type ? null : opt(q.id);
+      if (!o || !o.w) return;
+      var best = null, bestV = 0;
+      for (var k in o.w) {
+        var v = o.w[k] * (win.attr[k] - avg[k]);
+        if (v > bestV && win.why[k]) { bestV = v; best = k; }
+      }
+      if (!best) return;
+      var sent = win.why[best];
+      if (!groups[sent]) { groups[sent] = { v: 0, labels: [], sent: sent }; order.push(sent); }
+      groups[sent].v += bestV;
+      groups[sent].labels.push("\u201c" + o.label + "\u201d");
+    });
+    var list = order.map(function (k) { return groups[k]; });
+    list.sort(function (a, b) { return b.v - a.v; });
+    var res = list.slice(0, 3).map(function (g) {
+      var l = g.labels, who = l.length === 1 ? l[0] : l.slice(0, -1).join(", ") + " and " + l[l.length - 1];
+      return "You picked " + who + ". " + g.sent;
+    });
+    if (win.why.balanced && res.length < 2) res.push(win.why.balanced);
+    return res;
+  }
+
+  /* ---------- BRIEF + LIST ---------- */
+  function buildBrief() {
+    var loc = opt("loc"), who = opt("who"), stay = opt("stay"), fun = opt("fun"), feel = opt("feel"), peeve = opt("peeve");
+    var notice = (state.answers.notice && state.answers.notice.text) || "";
+    var s = "I'm designing a " + loc.phrase + " cabin for " + who.phrase + ". " +
+      "It will be used for " + stay.phrase + ". " +
+      "They love " + fun.phrase + ", and they want a cabin that feels " + feel.phrase + ". " +
+      "It must avoid " + peeve.phrase + ".";
+    if (notice) s += " The first thing a visitor should notice is: " + notice.replace(/[.\s]+$/, "") + ".";
+    state.brief = s;
+    state.chosen = rank()[0].id;
+    state.list = buildList();
+    state.placed = {};
+    state.checks = {};
+  }
+
+  function buildList() {
+    var m = {}, order = [];
+    function add(id, qty, why) {
+      if (!m[id]) { m[id] = { id: id, qty: 0, why: [] }; order.push(id); }
+      m[id].qty = Math.max(m[id].qty, qty);
+      if (why && m[id].why.indexOf(why) < 0) m[id].why.push(why);
+    }
+    var two = key("who") === "two", stay = key("stay"), cook = key("cook"), bath = key("bath"),
+        work = key("work"), lounge = key("lounge"), fun = key("fun"), peeve = key("peeve"), bed = key("bed");
+
+    // Bedroom
+    var bedMap = { twin: "bed_twin", full: "bed_full", queen: "bed_queen", king: "bed_king" };
+    if (bed === "twin" && two) add("bed_twin", 2, "Two people, so two twin beds.");
+    else add(bedMap[bed], 1, "You chose this bed size.");
+    add("nightstand", two ? 2 : 1, two ? "One nightstand for each person." : "A spot for a lamp and a phone.");
+    if (stay !== "weekend") add("dresser", 1, "You stay long enough to unpack.");
+
+    // Bath
+    add("toilet", 1, "Every cabin needs one.");
+    add(two ? "vanity_wide" : "vanity_narrow", 1, two ? "Two people share the sink, so go wider." : "One person, so a narrow vanity works.");
+    if (bath === "shower") add(stay === "year" ? "shower_rect" : "shower_sq", 1, "You want a quick shower." + (stay === "year" ? " A bigger shower for year-round living." : " A smaller one saves space."));
+    if (bath === "tub") add("tub", 1, "You want a long soak.");
+    if (bath === "both") { add("tub", 1, "You want both a tub and a shower."); add("shower_sq", 1, "You want both a tub and a shower."); }
+
+    // Kitchen
+    var base = 0;
+    if (cook === "barely") { base = 3; add("sink_single", 1, "A small kitchen is plenty."); add("fridge", 1, "You still need to keep food cold."); }
+    if (cook === "simple") { base = 5; add("sink_single", 1, "Simple meals."); add("fridge", 1, "Simple meals."); add("cooktop", 1, "Simple meals need a stove."); add("dine_round", 1, "A small table for one or two."); }
+    if (cook === "love") { base = 7; add("sink_double", 1, "You love cooking, so a double sink helps."); add("fridge", 1, "You love cooking."); add("cooktop", 1, "You love cooking."); add("dine_round", 1, "A small table for one or two."); }
+    if (cook === "host") { base = 7; add("sink_double", 1, "You host dinners, so a double sink helps."); add("fridge", 1, "You host dinners."); add("cooktop", 1, "You host dinners."); add("dine_rect", 1, "A bigger table so guests can sit down."); }
+    var cabWhy = ["Based on how you eat."], extras = 0;
+    if (stay === "year") { if (base < 6) base = 6; cabWhy.push("You live here year-round."); }
+    if (fun === "cooking") { extras += 2; cabWhy.push("Cooking is your hobby."); }
+    if (fun === "sports") { extras += 2; cabWhy.push("Storage for sports gear."); }
+    if (work === "studio") { extras += 2; cabWhy.push("Storage for studio supplies."); }
+    if (peeve === "storage") { extras += 2; cabWhy.push("You hate having no storage."); }
+    if (peeve === "clutter") { extras += 1; cabWhy.push("You hate clutter."); }
+    var cabs = Math.min(9, base + extras);
+    if (cabs > 0) { m.cabinet = { id: "cabinet", qty: cabs, why: cabWhy }; order.push("cabinet"); }
+
+    // Living
+    if (lounge === "shows") { add(two ? "couch_lg" : "couch_sm", 1, "Couch and a show." + (two ? " A large couch fits two." : "")); add("coffee_rect", 1, "A spot for snacks and your feet."); add("end_table", 1, "A place for a lamp or a drink."); }
+    if (lounge === "reading") { add("chair", two ? 2 : 1, "A reading chair" + (two ? " for each person." : " in a corner.")); add("end_table", 1, "A table for your book and a lamp."); }
+    if (lounge === "games") { add("couch_sm", 1, "Room to hang out."); add("coffee_sq", 1, "A square table for cards and board games."); add("chair", 2, "Seats for game night."); }
+    if (lounge === "deck") { add("couch_sm", 1, "You'll mostly be outside, so keep the inside simple."); add("chair", 1, "You'll mostly be outside, so keep the inside simple."); }
+    if (fun === "friends") add("chair", 3, "Seats for a few guests.");
+    if (fun === "reading") { add("chair", 1, "Your favorite reading spot."); add("end_table", 1, "A table for your book and a lamp."); }
+    if (fun === "music") add("console", 1, "A spot for speakers or instruments.");
+
+    // Work
+    if (work === "desk") add("desk", 1, "A small desk is enough.");
+    if (work === "station") { add("desk", 1, "A real workstation."); add("console", 1, "Shelves or a printer next to the desk."); }
+    if (work === "studio") { add("desk", 1, "A table to spread out on."); add("console", 1, "Shelf space for supplies."); }
+    if (fun === "gaming") add("desk", 1, "A gaming setup needs a desk.");
+    if (fun === "art") { add("desk", 1, "A work table for making things."); add("console", 1, "Shelf space for supplies."); }
+
+    return order.map(function (id) { return m[id]; });
+  }
+
+  /* ---------- RENDER: START + QUESTIONS ---------- */
+  function progress(step) {
+    var total = QUESTIONS.length, html = '<div class="dim" aria-hidden="true"><span class="tick"></span>';
+    for (var i = 0; i < total; i++) html += '<span class="seg' + (i <= step ? " done" : "") + '"></span><span class="tick"></span>';
+    return html + '</div><div class="dim-label">Question ' + (step + 1) + " of " + total + "</div>";
+  }
+
+  function renderStart() {
+    app.innerHTML =
+      '<div class="start"><h2 class="q">Design a cabin for a client who is almost you.</h2>' +
+      '<p class="hint">Every architect starts with a brief: who the building is for and what they need. Yours comes from how you like to live.</p>' +
+      '<ol class="how"><li>Answer 12 quick questions, plus one optional bonus.</li>' +
+      '<li>See which of the three cabins fits you best, and why.</li>' +
+      '<li>Get a design brief and a list of every piece of furniture, appliance, and fixture to put in your cabin.</li></ol>' +
+      '<label class="field-label" for="nm">Your first name</label>' +
+      '<input type="text" id="nm" maxlength="30" autocomplete="off" value="' + esc(state.name) + '">' +
+      '<div class="nav"><button class="btn" id="go">Start</button></div></div>';
+    var nm = document.getElementById("nm"); nm.focus();
+    function go() { state.name = nm.value.trim(); state.step = 0; render(); }
+    document.getElementById("go").onclick = go;
+    nm.onkeydown = function (e) { if (e.key === "Enter") go(); };
+  }
+
+  function renderQuestion() {
+    var q = QUESTIONS[state.step], a = state.answers[q.id] || {};
+    var html = progress(state.step) + '<h2 class="q">' + esc(q.title) + '</h2><p class="hint">' + esc(q.hint) + "</p>";
+    if (q.type === "text") {
+      html += '<input type="text" id="free" maxlength="80" placeholder="' + esc(q.placeholder) + '" value="' + esc(a.text || "") + '">';
+    } else {
+      html += '<fieldset class="opts"><legend style="position:absolute;left:-9999px">' + esc(q.title) + "</legend>";
+      q.opts.forEach(function (o, i) {
+        html += '<div class="opt"><input type="radio" name="opt" id="o' + i + '" value="' + i + '"' + (a.index === i ? " checked" : "") + '><label for="o' + i + '">' + esc(o.label) + (o.sub ? "<small>" + esc(o.sub) + "</small>" : "") + "</label></div>";
+      });
+      if (q.other) html += '<div class="opt"><input type="radio" name="opt" id="oOther" value="other"' + (a.index === "other" ? " checked" : "") + '><label for="oOther">Something else</label></div>';
+      html += '<div class="opt decide"><input type="radio" name="opt" id="oDecide" value="decide"><label for="oDecide">Decide for me</label></div></fieldset>';
+      if (q.other) html += '<div class="other-box" id="otherBox" ' + (a.index === "other" ? "" : "hidden") + '><label class="field-label" for="otherTxt">Write your own</label><input type="text" id="otherTxt" maxlength="50" value="' + esc(a.text || "") + '"></div>';
+    }
+    var last = state.step === QUESTIONS.length - 1;
+    html += '<div class="nav"><button class="btn ghost" id="back">Back</button><button class="btn" id="next">' + (last ? "Build my brief" : "Next") + "</button></div>";
+    app.innerHTML = html;
+
+    var next = document.getElementById("next");
+    document.getElementById("back").onclick = function () { saveCurrent(); state.step--; render(); };
+
+    if (q.type === "text") {
+      var free = document.getElementById("free"); free.focus();
+      free.onkeydown = function (e) { if (e.key === "Enter") next.click(); };
+      next.onclick = function () { saveCurrent(); advance(); };
+      return;
+    }
+    var radios = app.querySelectorAll('input[name="opt"]');
+    var otherBox = document.getElementById("otherBox"), otherTxt = document.getElementById("otherTxt");
+    function selected() { for (var i = 0; i < radios.length; i++) if (radios[i].checked) return radios[i].value; return null; }
+    function sync() {
+      var v = selected();
+      if (otherBox) { otherBox.hidden = v !== "other"; if (v === "other" && document.activeElement !== otherTxt) otherTxt.focus(); }
+      next.disabled = !(v !== null && (v !== "other" || otherTxt.value.trim()));
+    }
+    radios.forEach(function (r) { r.onchange = sync; });
+    if (otherTxt) { otherTxt.oninput = sync; otherTxt.onkeydown = function (e) { if (e.key === "Enter" && !next.disabled) next.click(); }; }
+    next.onclick = function () { saveCurrent(); advance(); };
+    sync();
+  }
+
+  function saveCurrent() {
+    var q = QUESTIONS[state.step];
+    if (q.type === "text") { state.answers[q.id] = { text: document.getElementById("free").value.trim() }; return; }
+    var sel = app.querySelector('input[name="opt"]:checked');
+    if (!sel) return;
+    var v = sel.value;
+    if (v === "decide") state.answers[q.id] = { index: Math.floor(Math.random() * q.opts.length) };
+    else if (v === "other") state.answers[q.id] = { index: "other", text: document.getElementById("otherTxt").value.trim() };
+    else state.answers[q.id] = { index: parseInt(v, 10) };
+  }
+  function advance() {
+    if (state.step < QUESTIONS.length - 1) { state.step++; render(); }
+    else { buildBrief(); state.step = QUESTIONS.length; render(); }
+  }
+
+  /* ---------- RENDER: RESULTS ---------- */
+  function cabinCardHtml() {
+    var ranks = rank(), c = CABINS[state.chosen], isTop = ranks[0].id === c.id;
+    var html = '<div class="pick"><h3>' + esc(c.name) + ": " + esc(c.nick) + "</h3>" +
+      '<p class="tagline">' + esc(c.tagline) + (isTop ? " This is your best match." : " You picked this one instead of the top match.") + "</p>" +
+      '<div class="chips">' + c.chips.map(function (x) { return '<span class="chip">' + esc(x) + "</span>"; }).join("") + "</div>";
+    var rs = reasons(c.id);
+    if (rs.length) html += '<p class="field-label" style="margin-top:12px">Why it fits your answers</p><ul class="why-list">' + rs.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>";
+    html += '<img class="render" src="plans/rendering-' + c.id + '.jpg" alt="Concept rendering of ' + esc(c.name) + '">' +
+      '<p class="caption">Concept rendering of ' + esc(c.name) + '. The finished cabin may look different.</p>' +
+      '<img class="planimg" src="plans/cabin-' + c.id + '.png" alt="First and second floor plans of ' + esc(c.name) + '">' +
+      '<div class="linkrow no-print"><a href="plans/cabin-' + c.id + '.pdf" target="_blank" rel="noopener">Open the printable plan (PDF)</a></div></div>';
+    return html;
+  }
+  function compareHtml() {
+    var ranks = rank();
+    return '<div class="compare no-print" role="group" aria-label="Choose a cabin">' + ranks.map(function (r, i) {
+      var c = CABINS[r.id];
+      return '<button type="button" class="cmp" data-act="choose" data-id="' + c.id + '" aria-pressed="' + (state.chosen === c.id) + '">' +
+        '<img class="thumb" src="plans/rendering-' + c.id + '.jpg" alt="">' +
+        "<strong>" + esc(c.name) + "</strong><span>" + esc(c.nick) + "</span><br><span class=\"pct\">" + (i === 0 ? "Best match, " : "") + r.pct + '% match</span>' +
+        '<div class="bar"><i style="width:' + r.pct + '%"></i></div></button>';
+    }).join("") + "</div>";
+  }
+
+  function listHtml() {
+    var total = 0, html = "";
+    ROOMS.forEach(function (room) {
+      var rows = state.list.filter(function (it) { return CATALOG[it.id].room === room; });
+      if (!rows.length) return;
+      html += '<h4 class="room">' + room + '</h4><ul class="items">';
+      rows.forEach(function (it) {
+        var c = CATALOG[it.id], done = !!state.placed[it.id];
+        total += c.w * c.d * it.qty;
+        html += '<li class="' + (done ? "done" : "") + '"><input type="checkbox" id="p_' + it.id + '" data-act="placed" data-id="' + it.id + '"' + (done ? " checked" : "") + ">" +
+          '<label for="p_' + it.id + '">' + esc(c.n) + ' <span class="dims">' + (it.qty > 1 ? "× " + it.qty + ", " : "") + esc(dimText(c)) + (it.qty > 1 ? " each" : "") + (c.extra ? ", " + esc(c.extra) : "") + "</span></label>" +
+          '<div class="qty no-print"><button type="button" class="mini" data-act="dec" data-id="' + it.id + '" aria-label="Remove one ' + esc(c.n) + '">−</button><b>' + it.qty + '</b><button type="button" class="mini" data-act="inc" data-id="' + it.id + '" aria-label="Add one ' + esc(c.n) + '">+</button></div>' +
+          '<div class="why">' + esc(it.why.join(" ")) + "</div></li>";
+      });
+      html += "</ul>";
+    });
+    if (!state.list.length) html += '<p class="fine">Your list is empty. Add an item below.</p>';
+
+    var placedN = state.list.filter(function (it) { return state.placed[it.id]; }).length;
+    var usable = CABINS[state.chosen].usable, pct = Math.round(100 * total / usable);
+    var cls = pct > 40 ? "high" : pct > 30 ? "mid" : "", msg;
+    if (pct > 40) msg = "Tight. Your furniture takes up about " + pct + "% of the floor. Cut something, shrink something, or try a different cabin.";
+    else if (pct > 30) msg = "A good fit, but check that you can still walk between rooms. Furniture takes up about " + pct + "% of the floor.";
+    else msg = "Plenty of room to move. Furniture takes up about " + pct + "% of the floor.";
+    html = '<p class="fine" style="margin:0 0 4px">' + placedN + " of " + state.list.length + " items drawn on your plan</p>" + html +
+      '<h4 class="room">Space check</h4><div class="meter ' + cls + '" role="img" aria-label="Furniture uses ' + pct + ' percent of floor space"><i style="width:' + Math.min(100, pct) + '%"></i></div>' +
+      '<p class="meter-note">' + msg + '</p><p class="fine">This is a rough estimate. It compares furniture footprints to about ' + usable + " sq ft of floor on both levels, not counting stairs or decks. Chairs and doors need extra space too.</p>";
+
+    html += '<div class="addrow no-print"><div><label class="field-label" for="addSel">Add something else</label><select id="addSel">';
+    ROOMS.forEach(function (room) {
+      html += '<optgroup label="' + room + '">';
+      Object.keys(CATALOG).forEach(function (id) { if (CATALOG[id].room === room) html += '<option value="' + id + '">' + esc(CATALOG[id].n) + " (" + esc(dimText(CATALOG[id])) + ")</option>"; });
+      html += "</optgroup>";
+    });
+    html += '</select></div><button type="button" class="btn" data-act="add" style="align-self:end">Add</button></div>';
+    return html;
+  }
+
+  function renderResult() {
+    var today = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    var c = CABINS[state.chosen];
+    var tips = [];
+    QUESTIONS.forEach(function (q) { var o = q.type ? null : opt(q.id); if (o && o.note) tips.push(o.note); });
+    var notice = state.answers.notice && state.answers.notice.text;
+    if (notice) tips.push("Plan the entry so a visitor notices this first: " + notice.replace(/[.\s]+$/, "") + ".");
+
+    var html =
+      '<h2 class="drawing-title">' + (state.name ? esc(state.name) + "'s cabin" : "Your cabin") + "</h2>" +
+      '<p class="sub">Here is the cabin that fits your answers best, a design brief to build around, and everything that goes inside. You can change the cabin, edit the brief, and add or remove items.</p>' +
+      '<div id="cabinWrap">' + cabinCardHtml() + "</div>" + compareHtml() +
+      '<h3 class="sec">Your design brief</h3>' +
+      '<div class="row"><div><label class="field-label" for="client">Name your client</label><input type="text" id="client" maxlength="50" placeholder="Example: The Okafor family" value="' + esc(state.client) + '"></div></div>' +
+      '<div class="brief-box"><label class="field-label" for="brief">Design brief (edit it until it sounds like your client)</label><textarea id="brief">' + esc(state.brief) + "</textarea></div>" +
+      '<h3 class="sec">What goes in your cabin</h3>' +
+      '<p class="sub" style="margin-bottom:6px">Built from your answers. Check each item off as you draw it on your plan. Sizes are measured from your furniture sheet, so they are approximate.</p>' +
+      '<div id="listWrap">' + listHtml() + "</div>" +
+      '<details class="tpl no-print"><summary>Show the furniture templates</summary><img class="planimg" src="plans/furniture.png" alt="Furniture, appliance, and fixture symbols at 1/4 inch scale"><div class="linkrow"><a href="plans/furniture.pdf" target="_blank" rel="noopener">Open the printable furniture sheet (PDF)</a></div></details>' +
+      '<h3 class="sec">Design tips for your cabin</h3><ul class="check">';
+    c.tips.concat(tips).forEach(function (t, i) { html += checkItem("t" + i, t); });
+    html += '</ul><h3 class="sec">Required for every cabin</h3><ul class="check" id="baseChecks">';
+    BASE_CHECKS.forEach(function (t, i) { html += checkItem("b" + i, t); });
+    html += "</ul>" +
+      '<div class="titleblock" id="tb"></div>' +
+      '<div class="nav no-print"><button class="btn" data-act="copy">Copy brief and list</button><button class="btn" data-act="print">Print</button>' +
+      '<button class="btn ghost" data-act="rebuild">Rebuild from answers</button><button class="btn ghost" data-act="redo">Change answers</button><button class="btn ghost" data-act="restart">Start over</button>' +
+      '<span class="toast" id="toast" role="status"></span></div>';
+    app.innerHTML = html;
+    renderTitleBlock(today);
+
+    document.getElementById("brief").oninput = function (e) { state.brief = e.target.value; };
+    document.getElementById("client").oninput = function (e) { state.client = e.target.value; renderTitleBlock(today); };
+  }
+  function checkItem(k, text) {
+    var done = !!state.checks[k];
+    return '<li class="' + (done ? "done" : "") + '"><input type="checkbox" id="' + k + '" data-act="check" data-id="' + k + '"' + (done ? " checked" : "") + '><label for="' + k + '">' + esc(text) + "</label></li>";
+  }
+  function renderTitleBlock(today) {
+    var c = CABINS[state.chosen];
+    document.getElementById("tb").innerHTML =
+      "<div><small>Project</small><strong>" + esc(c.name) + "</strong></div><div><small>Footprint</small><strong>24' × 24'</strong></div>" +
+      "<div><small>Designer</small><strong>" + (state.name ? esc(state.name) : "Student") + "</strong></div>" +
+      "<div><small>Client</small><strong>" + (state.client ? esc(state.client) : "&nbsp;") + "</strong></div>" +
+      "<div><small>Date</small><strong>" + esc(today) + "</strong></div><div><small>Plan scale</small><strong>1/4\" = 1'</strong></div>";
+  }
+  function refreshList() { document.getElementById("listWrap").innerHTML = listHtml(); }
+  function refreshCabin() {
+    document.getElementById("cabinWrap").innerHTML = cabinCardHtml();
+    app.querySelectorAll(".cmp").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.id === state.chosen)); });
+    refreshList();
+    renderTitleBlock(new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }));
+  }
+  function findItem(id) { for (var i = 0; i < state.list.length; i++) if (state.list[i].id === id) return i; return -1; }
+
+  function say(t) { var el = document.getElementById("toast"); if (!el) return; el.textContent = t; setTimeout(function () { el.textContent = ""; }, 2200); }
+  function plainText() {
+    var c = CABINS[state.chosen], out = [];
+    out.push((state.name ? state.name + "'s " : "") + c.name + " (" + c.nick + ")");
+    if (state.client) out.push("Client: " + state.client);
+    out.push("", state.brief, "", "What goes in the cabin:");
+    ROOMS.forEach(function (room) {
+      var rows = state.list.filter(function (it) { return CATALOG[it.id].room === room; });
+      if (!rows.length) return;
+      out.push(room + ":");
+      rows.forEach(function (it) { out.push("  - " + (it.qty > 1 ? it.qty + " × " : "") + CATALOG[it.id].n + " (" + dimText(CATALOG[it.id]) + ")"); });
+    });
+    return out.join("\n");
+  }
+
+  /* ---------- EVENTS ---------- */
+  app.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-act]");
+    if (!t || t.tagName === "INPUT") return;
+    var act = t.dataset.act, id = t.dataset.id, i;
+    if (act === "choose") { state.chosen = id; refreshCabin(); }
+    else if (act === "inc") { i = findItem(id); if (i >= 0) { state.list[i].qty++; refreshList(); } }
+    else if (act === "dec") { i = findItem(id); if (i >= 0) { state.list[i].qty--; if (state.list[i].qty <= 0) state.list.splice(i, 1); refreshList(); } }
+    else if (act === "add") {
+      var sel = document.getElementById("addSel").value; i = findItem(sel);
+      if (i >= 0) state.list[i].qty++; else state.list.push({ id: sel, qty: 1, why: ["You added this."] });
+      refreshList();
+    }
+    else if (act === "print") window.print();
+    else if (act === "copy") {
+      var text = plainText();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { say("Copied."); }, function () { say("Copy failed. Select the text and copy it."); });
+      else say("Copy isn't available here. Select the text and copy it.");
+    }
+    else if (act === "rebuild") { buildBrief(); renderResult(); }
+    else if (act === "redo") { state.step = 0; render(); }
+    else if (act === "restart") { state = fresh(); render(); }
+  });
+  app.addEventListener("change", function (e) {
+    var t = e.target;
+    if (!t.dataset || !t.dataset.act) return;
+    if (t.dataset.act === "placed") { state.placed[t.dataset.id] = t.checked; t.closest("li").classList.toggle("done", t.checked); refreshPlacedCount(); }
+    if (t.dataset.act === "check") { state.checks[t.dataset.id] = t.checked; t.closest("li").classList.toggle("done", t.checked); }
+  });
+  function refreshPlacedCount() {
+    var scroll = window.scrollY; refreshList(); window.scrollTo(0, scroll);
+  }
+
+  function render() {
+    if (state.step < 0) renderStart();
+    else if (state.step < QUESTIONS.length) renderQuestion();
+    else renderResult();
+    window.scrollTo(0, 0);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
